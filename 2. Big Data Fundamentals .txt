@@ -1,0 +1,474 @@
+Big Data Fundamentals
+_____________________ 1 _____________________
+
+- SparkContext phải được khởi tạo trước khi sử dụng PySpark (viết tắt là sc)
+
+- Các phương thức chính:
++ sc.version
++ sc.pythonVer
++ sc.master: trả về local hoặc cluster	//xem thêm
+
+- Các cách khởi tạo dữ liệu:
+	+ Cách 1:
+rdd1 = sc.parallelize([1, 2, 3, 4, 5])
+	+ Cách 2:
+rdd2 = sc.textFile("test.txt")
+
+_____________________ 2 _____________________
+
+- lambda, map, filter
++ lambda được gọi là hàm ẩn danh
+	lambda arguments: expression
+VD:
+double = lambda x: x+2
+print(double(3)
+	-> In ra: 6
+
++ map(func, list)
+VD:
+items = [1, 2, 3, 4]
+list(map(lambda x: x+2, items))
+	-> In ra: [3, 4, 5, 6]
+
++ filter(func, list)
+VD:
+items = [1, 2, 3, 4]
+list(filter(lambda x: (x%2 != 0), items))
+	-> In ra: [1, 3]
+
+_____________________ 3 _____________________
+
+- Tóm tắt dữ liệu với RDD
++ RDD (Resilient Distributed Datasets): bộ dữ liệu phân tán đàn hồi
++ Khi Spark xử lý dữ liệu, nõ sẽ chia dữ liệu thành các phân vùng phân phối dữ liệu trên các nút cụm
+
+- Có 3 phương pháp tạo RDD:
++ C1: lấy list, arr, ... rồi chuyển sang parallelize của sc
+VD: helloRDD = sc.parallelize("Hello World"))
+
++ C2: tải dữ liệu từ bên ngoài
+VD: fileRDD = sc.fileText("test.txt")
+ 
++ C3: Tạo ra từ RDD hiện có
+
+	- Cách chia phân vùng trong PySpark
++ helloRDD = sc.parallelize("Hello World"), minPartitions = 6)
++ fileRDD = sc.fileText("test.txt", minPartitions = 6)
+
+	- Cách kiểm tra số phân vùng:
+fileRDD.getNumPartitions()
+
+_____________________ 4 _____________________
+
+- RDD hỗ trợ 2 loại hoạt động khác nhau
++ Transformations: RDD này trả về RDD mới
++ Actions: thực hiện tính toán trên RDD
+
+
+	- Basic RDD Transformations: map(), filter(), flatMap(), union()
+
++ map()
+RDD = sc.parallelize([1, 2, 3, 4])
+RDD_map = RDD.map(lambda x: x+2)
+
++ filter()
+RDD = sc.parallelize([1, 2, 3, 4])
+RDD_filter = RDD.filter(lambda x: x>2)
+
++ flatMap()
+RDD = sc.parallelize(["Hello World", "How are you"])
+RDD_filter = RDD.flatMap(lambda x: x.split(" "))
+# In ra: ["Hello", "World", "How", "are", "you"]
+
++ union()
+inputRDD = sc.textFile("logs.txt")
+errorRDD = inputRDD.filter(lambda x: "error" in x.split())
+warningsRDD = inputRDD.filter(lambda x: "warnings" in x.split())
+combinedRDD = errorRDD.union(warningsRDD)
+
+	- Basic RDD Actions: 
++ collect(): 
+RDD_map.collect()
+	-> In ra: [1, 4, 9, 16]
+
++ take(N): in ra số phần tử N đầu tiên trong RDD
+RDD_map.take(2)
+	-> In ra: [1, 4]
+
++ first(): 
+RDD_map.first()
+	-> In ra: [1]
+
++ count():
+RDD_map.count()
+	-> In ra: 4
+
+_____________________ 5 _____________________
+
+- Pair RDD (keys:values)
+
+- 2 cách phổ biến để tạo pair rdd:
++ Cách 1:
+my_tuple = [('Sam', 23), ('Mary', 34), ('Peter', 25)]
+pairRDD_tuple = sc.parallelize(my_tuple)
+
++ Cách 2:
+my_list = ['Sam 23', 'Mary 34', 'Peter 25']
+regularRDD = sc.parallelize(my_list)
+pairRDD_RDD = regularRDD.map(lambda s: (s.split(' ')[0], s.split(' ')[1])
+
+- Transformations on pair RDDs:
++ reduceByKey(func): 
+VD: 
+rdd = sc.parallelize([(1, 2), (2, 3), (1, 4), (2, 5), (3, 6)]
+result = rdd.reduceByKey(lambda x, y: x + y)
+	-> [(1, 6), (2, 8), (3, 8)]
+
++ groupByKey(): nhóm theo key
+
++ sortByKey(): sắp xếp theo key
+
++ join(): 
+RDD1.join(RDD2)
+VD: 
+RDD1 = ...[('Messi', 10), ('Kun', 8)]
+RDD2 = ...[('Messi', 6)]
+RDD1.join(RDD2)
+	-> [('Messi', (10, 6)), ('Kun', 8)]
+
+_____________________ 6 _____________________
+
+- Advanced RDD Actions
++ reduce()
+RDD = sc.parallelize([1, 3, 4, 6])
+RDD.reduce(lambda x, y: x+y)
+	-> 14
+
++ saveAsTextFile(): dùng để lưu RDD dữ dạng text
+RDD.saveAsTextFile("tempFile")
+
++ coalesce()
+RDD.coalesce(1).saveAsTextFile("tempFile")
+
++ countByKey()
+rdd = sc.parallelize([('a', 1), ('b', 1), ('a', 1)]
+for kee, val in rdd.countByKey().items():
+	print(kee,val)
+	-> 	('a', 2)
+		('b', 1)
+
++ collectAsMap()
+sc.parallelize([(1, 2), (3, 4)].collectAsMap()
+	-> {1:2, 3:4}
+
+_____________________ 7 _____________________
+
+- Một ví dụ:
+# Count the unique keys
+# Rdd = ...[(1, 2), (3, 4), (3, 6), (4, 5)]
+total = Rdd.countByKey()
+
+# What is the type of total?
+print("The type of total is", type(total))
+
+# Iterate over the total and print the output
+for k, v in total.items(): 
+	print("key", k, "has", v, "counts")
+
+_____________________ 8 _____________________
+
+- SparkSession (viết tắt spark) làm cho DataFrames những gì SparkContext làm cho RDD
+
+- Có 2 cách tạo df:
+	+ Cách 1:
+iphones_RDD = sc.parallelize([
+	("XS", 2018, 5.65, 2.79, 6.24),
+	("XR", 2018, 5.94, 2.98, 6.84)
+])
+names = ['Model', 'Year', 'Height', 'Width', 'Weight']
+iphone_df = spark.createDataFrame(iphones_RDD, schema = names)
+
+	+ Cách 2:
+df_csv = spark.read.csv("people.csv", header = True, inferSchema = True)
+Tương tự cho df_json, df_txt
+ ** header và inferScheme (lấy đúng kiểu dữ liệu) là tùy chọn
+
+_____________________ 9 _____________________
+
++ Làm việc trong df dễ hơn trong RDD nên cần chuyển RDD sang df:
+	df = rdd.toDF()
+
+_____________________ 10 _____________________
+
+- df cũng có 2 loại hoạt động là: Transformations và Actions
+
+- DF Transformations
++ select()
+df_id_age = test.selefct('Age')
+df_id_age.show(10)
+
++ filter()
+new_df_age21 = df.filter(df.Age > 21)
+
++ groupby()
+df_age_group = df.groupby('Age')
+df_age_group.count().show(4)
+
++ orderBy()
+df_age_group.count().orderBy('Age').show(6)
+
++ dropDuplicates()
+df_no_dup = df.select('user_id', 'gender', 'age').dropDuplicates()
+df_no_dup.count()
+
++ withColumnRenamed()
+df_sex = df.withColumnRenamed('gender', 'sex')
+df_sex.show(3)
+
+
+- DF Actions:
++ printSchema()
+df.printSchema(): in các trường dưới dạng lược đồ
+|-- user_id: integer (nullable = false)
+|-- gender: boolean (nullable = true)
+|-- age: integer (nullable = true)
+
++ head()
++ show()
++ count()
+
++ colums
+df.columns: in ra tên trường
+VD: ['user_id', 'gender', 'age']
+
++ describe()
+df.describe().show(): tóm tắt các thông tin như count, mean, stddev, min, max của tất cả các trường thông tin
+
+_____________________ 11 _____________________
+
+- Tương tác với DataFrames:
+
++ Có thể truy vấn SQL trên bảng tạm của df:
+df.createOrReplaceTempView("table1")
+df2 = spark.sql("SELECT field1, field2 FROM table1)
+df2.collect()
+
+HOẶC
+df.createOrReplaceTempView("table2")
+query = 'SELECT Age FROM table2 WHERE Gender="M"'
+spark.sql(query).show(5)
+
+_____________________ 12 _____________________
+
+- Data Viz
+Có 3 cách để tạo biểu đồ cho PySpark DataFrames
+	+ thư viện pyspark_dist_explore: có 3 func chính là hist(), distplot(), pandas_histogram()
+df_age = df.select('Age')
+hist(df_age, bins=20, color='red')
+
+	+ toPandas(): chuyển df_ps sang df_pd để viz
+
+	+ thư viện HandySpark: sức mạnh như Pandas nhưng vẫn giữ được lợi thế tính toán phân tán
+hdf = df.toHandy()
+hdf.cols['Age'].hist()
+
+_____________________ 13 _____________________
+
+- Tổng quan MLlib
++ Cung cấp các thuật toán như Collaborative filtering, Classification, Clustering
++ Tác tính năng: feature extraction (trích chọn đặc trưng), transformations (chuyển đổi), dimensionality reduction (giảm kích thước), selection (lựa chọn)
++ Pipelines: constructing (xây dựng), evaluating (đánh giá), tuning (điều chỉnh)
+
++ Hỗ trợ gần như tất cả các thuật toán phân loại mà sklearn hỗ trợ
++ CF thường được sử dụng cho hệ thống đề xuất
+
+** MLlib chỉ hỗ trợ RDD
+
+_____________________ 14 _____________________
+
+- Collaborative filtering (lọc cộng tác)
+
++ CF có 2 cách tiếp cận:
++ user-user: xếp hạng cộng tác của người dùng để đề xuất
+
++ item-item: đề xuất các mặt hàng tương tự và có liên quan đến mặt hàng được liên kết với người dùng mục tiêu
+
+
+from pyspark.mllib.recommendation import ALS
+from pyspark.mllib.classification import Rating
+r = Rating(user = 1, product = 2, rating = 5.0)
+(r[0], r[1], r[2])
+
+# randomSplit(): chia train, test
+data = sc.parallelize([i for i in rage(1, 11)]
+training, test = data.randomSplit([0.6, 0.4])
+traning.collect()
+test.collect()
+
+# ALS xếp hạng sản phẩm phù hợp với khách hàng dựa trên các lần mua trước đó
+ALS.train(tên_training_data, rank, iterations)
+
+_____________________ 15 _____________________
+
+Ví dụ ALS:
+r1 = Rating(1, 1, 1.0)
+r1 = Rating(1, 2, 2.0)
+r1 = Rating(2, 1, 2.0)
+ratings = sc.parallelize([r1, r2, r3])
+ratings.collect()
+
+	-> In ra:
+[Rating(user=1, product=1, rating=1.0),
+Rating(user=1, product=2, rating=2.0),
+Rating(user=2, product=1, rating=2.0)]
+
+
+# predictAll()
+unrated_RDD = sc.parallelize([(1, 2), (1,1)])
+predictions = model.predictAll(unrated_RDD)
+predictions.collect()
+	-> In ra:
+[Rating(user=1, product=1, rating=1.000017.....),
+ Rating(user=1, product=2, rating=1.989012....)]
+
+
+# MSE
+MSE = rates_preds.map(lambda r: (r[1][0] - r[1][1])**2).mean()
+
+_____________________ 16 _____________________
+
+
+- Classification
+
++ Các thuật toán phân loại nhị phân:
+	SVM
+	Logistic Regression
+	Random Forest
+	Naive-Bayes
+	XGBoost
+
++ Các loại dữ liệu phố biến trong MLlib: Vectors, LabelledPoint
++ Các vectors có 2 loại:  dense (dày đặc), sparse (thưa thớt)
+denseVec = Vectors.dense([1.0, 2.0, 3.0])
+sparseVec = Vectors.sparse(4, {1:1.0, 3:5.5})
+
++ Các LabeledPoint
+positive = LabeledPoint(1.0, [1.0, 0.0, 3.0])
+negative = LabeledPoint(0.0, [2.0, 1.0, 1.0])
+
+_____________________ 17 _____________________
+
+- Thuật toán HashingTF(): tính toán vectors tần số có kích thước nhất định từ một tài liệu
+
+Ví dụ:
+from pyspark.mllib.feature import HashingTF
+sentence = "hello hello world"
+words = sentence.split()
+tf = HashingTF(10000)
+tf.transform(words)
+	// Chia câu "hello hello world" vào list và tạo các vector có kích thước 10000. Sau đó, tính toán vector tần số bằng cách sử dụng tf.transform()
+	-> In ra: SparseVector(10000, {3065:1.0, 6861:2.0})
+
+
+
+- Thuật toán Logistic Regression
++ Yêu cầu dữ liệu là RDD của LabeledPoint
+
+Ví dụ 1:
+from pyspark.mllib.classification import LogisticRegressionWithLBFGS
+data = [
+	LabeledPoint(0.0, [0.0, 1.0]),
+	LabeledPoint(1.0, [1.0, 0.0])
+]
+RDD = sc.parallelize(data)
+# Train
+lrm = LogisticRegressionWithLBFGS.train(RDD)
+# Preds
+lrm.predict([1.0, 0.0])
+lrm.predict([0.0, 1.0])
+	-> In ra:	1
+			0
+
+Ví dụ 2:
+# Load the datasets into RDDs
+spam_rdd = sc.textFile(file_path_spam)
+non_spam_rdd = sc.textFile(file_path_non_spam)
+
+# Split the email messages into words
+spam_words = spam_rdd.flatMap(lambda email: email.split(' '))
+non_spam_words = non_spam_rdd.flatMap(lambda email: email.split(' '))
+
+# Print the first element in the split RDD
+print("The first element in spam_words is", spam_words.first())
+print("The first element in non_spam_words is", non_spam_words.first())
+
+# Create a HashingTF instance with 200 features
+tf = HashingTF(numFeatures=200)
+
+# Map each word to one feature
+spam_features = tf.transform(spam_words)
+non_spam_features = tf.transform(non_spam_words)
+
+# Label the features: 1 for spam, 0 for non-spam
+spam_samples = spam_features.map(lambda features:LabeledPoint(1, features))
+non_spam_samples = non_spam_features.map(lambda features:LabeledPoint(0, features))
+
+# Combine the two datasets
+samples = spam_samples.join(non_spam_samples)
+
+# Split the data into training and testing
+train_samples,test_samples = samples.randomSplit([0.8, 0.2])
+
+# Train the model
+model = LogisticRegressionWithLBFGS.train(train_samples)
+
+# Create a prediction label from the test data
+predictions = model.predict(test_samples.map(lambda x: x.features))
+
+# Combine original labels with the predicted labels
+labels_and_preds = test_samples.map(lambda x: x.label).zip(predictions)
+
+# Check the accuracy of the model on the test data
+accuracy = labels_and_preds.filter(lambda x: x[0] == x[1]).count() / float(test_samples.count())
+print("Model accuracy : {:.2f}".format(accuracy))
+
+_____________________ 18 _____________________
+
+- Clustering
++ Có nhiều thuật toán Clustering như:
+	K-means
+	Gaussian mixture
+	Power iteration clustering (PIC)
+	Bisecting k-means
+	Streaming k-means
+
+
+from pyspark.mllib.clustering import KMeans
+
+RDD = sc.textFile("WineData/csv"). \
+		map(lambda x: x.aplit(","). \
+		map(lambda x: [float(x[0]), float(x[1])])
+
+model = KMeans.train(RDD, k = 2, maxIterations = 10)
+model.clusterCenters
+	-> In ra [array([1.21.., 2.21..]), array([13.19.., 2.13..])]
+	// Đây là tọa độ tâm cụm
+
+
+# Evaluating (đánh giá lỗi):	// tự viết
+from math import sqrt
+def error(point):
+	center = model.centers[model.predict(point)]
+	return sqrt(sum([x**2 for x in (point - center)])
+WSSSE = RDD.map(lambda point: error(point)).reduce(lambda x, y: x+y)
+// Within Set Sum of Squared Error
+
+# Viz
+
+
+_____________________ 19 _____________________
+
+
+
+
+_____________________ End _____________________
